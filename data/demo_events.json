@@ -1,0 +1,44 @@
+[
+  {
+    "id": "demo_nvda_q3fy25",
+    "label": "NVDA — Q3 FY2025 Earnings Beat + Data Center Blowout",
+    "ticker": "NVDA",
+    "cik": "0001045810",
+    "filing_date": "2024-11-20",
+    "accession": "0001045810-24-106516",
+    "primary_document": "nvda-20241027.htm",
+    "items": "2.02,9.01",
+    "event_type": "earnings_beat",
+    "description": "NVIDIA reported Q3 FY2025 revenue of $35.1B vs. consensus $33.1B (+6.1% beat). Data Center revenue of $30.8B grew 112% YoY. EPS of $0.81 beat by $0.06. Guided Q4 to $37.5B ±2%, above consensus of $37.0B.",
+    "use_pre_loaded_text": true,
+    "pre_loaded_text": "NVIDIA CORPORATION REPORTS FINANCIAL RESULTS FOR THE THIRD QUARTER FISCAL 2025. Santa Clara, California - November 20, 2024 - NVIDIA (NASDAQ: NVDA) today reported revenue for the third quarter ended October 27, 2024, of $35.1 billion, up 17% from the previous quarter and up 94% from a year ago. GAAP earnings per diluted share for the quarter were $0.78, up 16% from the previous quarter and up 111% from a year ago. Non-GAAP earnings per diluted share were $0.81, up 19% from the previous quarter and up 103% from a year ago. Revenue by Market Platform: Data Center revenue was a record $30.8 billion, up 17% from the previous quarter and up 112% from a year ago. Gaming revenue was $3.3 billion, up 14% from the previous quarter and up 15% from a year ago. Professional Visualization revenue was $486 million, up 7% from the previous quarter and up 17% from a year ago. Automotive revenue was $449 million, up 30% from the previous quarter and up 72% from a year ago. OEM and Other revenue was $108 million. Outlook: NVIDIA's outlook for the fourth quarter of fiscal 2025 is: Revenue is expected to be $37.5 billion, plus or minus 2%. GAAP and non-GAAP gross margins are expected to be 73.0% and 73.5%, respectively, plus or minus 50 basis points. CEO Jensen Huang said: 'The age of AI is in full steam, propelling a global shift to NVIDIA computing. Demand for Hopper and anticipation for Blackwell - in full production - are incredible as foundation model makers scale pretraining, post-training, and inference.'"
+  },
+  {
+    "id": "demo_amd_guidance_cut",
+    "label": "AMD — Q3 2024 Guidance Cut: Gaming & Embedded Weakness",
+    "ticker": "AMD",
+    "cik": "0000002488",
+    "filing_date": "2024-10-29",
+    "accession": "0000002488-24-000123",
+    "primary_document": "amd-20240928.htm",
+    "items": "2.02,9.01",
+    "event_type": "guidance_cut",
+    "description": "AMD reported Q3 2024 revenue of $6.82B (+18% YoY), but guided Q4 to $7.5B ±$300M, below prior guidance of $7.7B. Gaming segment declined 69% YoY due to semi-custom revenue normalization. MI300X AI GPU sales tracking to $5B for 2024.",
+    "use_pre_loaded_text": true,
+    "pre_loaded_text": "AMD REPORTS THIRD QUARTER 2024 FINANCIAL RESULTS. SANTA CLARA, Calif., Oct. 29, 2024 - AMD (NASDAQ: AMD) today announced revenue for the third quarter of 2024 of $6.82 billion, gross margin of 50%, operating income of $724 million, net income of $771 million, and diluted earnings per share of $0.47. On a non-GAAP basis, gross margin was 54%, operating income was $1.72 billion, net income was $1.50 billion, and diluted earnings per share was $0.92. Q3 2024 Highlights: Data Center segment revenue was $3.55 billion, up 122% year-over-year and up 25% sequentially, driven by strong sales of AMD Instinct GPU and EPYC CPU products. Client segment revenue was $1.88 billion, up 29% year-over-year and up 26% sequentially. Gaming segment revenue was $462 million, down 69% year-over-year and down 29% sequentially, reflecting reduced semi-custom revenue. Embedded segment revenue was $927 million, up 25% year-over-year. Q4 2024 Outlook: Revenue of approximately $7.5 billion, plus or minus $300 million. This represents approximately 22% year-over-year growth. Non-GAAP gross margin of approximately 54%. AMD CEO Dr. Lisa Su commented: 'We delivered strong revenue growth in the third quarter driven by our Data Center segment which set a new quarterly revenue record. MI300X GPU sales have ramped extremely well and remain on track to exceed $5 billion in 2024.'"
+  },
+  {
+    "id": "demo_amzn_q2fy24",
+    "label": "AMZN — Q2 2024 Earnings Beat + AWS Acceleration",
+    "ticker": "AMZN",
+    "cik": "0001018724",
+    "filing_date": "2024-08-01",
+    "accession": "0001018724-24-000123",
+    "primary_document": "amzn-20240630.htm",
+    "items": "2.02,9.01",
+    "event_type": "earnings_beat",
+    "description": "Amazon reported Q2 2024 revenue of $148.0B vs $148.6B consensus (slight miss) but operating income of $14.7B crushed the $13.0B consensus. AWS grew 19% YoY to $26.3B. Guided Q3 operating income to $11.5B-$15.0B above the $13.3B consensus.",
+    "use_pre_loaded_text": true,
+    "pre_loaded_text": "AMAZON.COM ANNOUNCES SECOND QUARTER RESULTS. SEATTLE - August 1, 2024 - Amazon.com, Inc. (NASDAQ: AMZN) today announced financial results for its second quarter ended June 30, 2024. Net sales increased 10% to $148.0 billion in the second quarter, compared with $134.4 billion in second quarter 2023. Operating income increased to $14.7 billion in the second quarter, compared with $7.7 billion in second quarter 2023. Net income increased to $13.5 billion in the second quarter, or $1.26 per diluted share, compared with $6.7 billion, or $0.65 per diluted share, in second quarter 2023. AWS net sales were $26.3 billion in Q2 2024, up 19% year over year, driven by customer demand for cloud computing and generative AI services. North America segment operating income was $5.1 billion for Q2 2024, an 8.1% operating margin versus 3.9% in the prior year period. Andy Jassy, Amazon's President and CEO, said: 'Q2 was a strong quarter across the board. AWS continues to reaccelerate, driven by companies both optimizing their existing workloads and committing to new long-term deals.' Q3 2024 Guidance: Net sales between $154.0 billion and $158.5 billion, representing growth of 8% to 11% year over year. Operating income between $11.5 billion and $15.0 billion."
+  }
+]

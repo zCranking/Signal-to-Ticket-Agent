@@ -1,0 +1,54 @@
+{
+  "fund_name": "Signal Capital Partners — Domestic Equity Fund",
+  "version": "2026-Q1",
+  "effective_date": "2026-01-01",
+
+  "hard_rules": {
+    "description": "Any violation results in an automatic KILL. No exceptions.",
+    "restricted_tickers": ["META", "GOOGL", "GOOG", "TSLA", "GME", "AMC", "RIVN", "LCID"],
+    "restricted_sectors": ["Cannabis", "Gambling", "Controversial Defense", "Crypto-Native"],
+    "max_single_position_usd": 500000,
+    "max_single_position_pct_portfolio": 0.10,
+    "min_market_cap_usd": 2000000000,
+    "min_avg_daily_volume_usd": 5000000,
+    "no_short_selling": true,
+    "no_leverage": true,
+    "no_derivatives": true,
+    "no_otc_securities": true
+  },
+
+  "sector_caps": {
+    "description": "Maximum portfolio weight per GICS sector.",
+    "Technology": 0.35,
+    "Healthcare": 0.20,
+    "Financials": 0.20,
+    "Consumer Discretionary": 0.15,
+    "Communication Services": 0.15,
+    "Industrials": 0.15,
+    "Energy": 0.10,
+    "Materials": 0.08,
+    "Real Estate": 0.08,
+    "Utilities": 0.06,
+    "Consumer Staples": 0.10,
+    "default": 0.12
+  },
+
+  "soft_guidelines": {
+    "description": "Non-blocking — generate warnings, do not KILL.",
+    "preferred_min_confidence_score": 60,
+    "max_correlated_positions": 3,
+    "earnings_blackout_days_before": 2,
+    "earnings_blackout_days_after": 1,
+    "min_sell_side_analyst_coverage": 3,
+    "preferred_min_market_cap_usd": 5000000000,
+    "avoid_single_customer_concentration_above_pct": 0.30
+  },
+
+  "risk_limits": {
+    "description": "Portfolio-level risk controls.",
+    "max_portfolio_realized_vol_hv20": 0.35,
+    "individual_position_stop_loss_pct": 0.07,
+    "portfolio_max_drawdown_trigger_pct": 0.15,
+    "max_sector_concentration_pct": 0.40
+  }
+}
