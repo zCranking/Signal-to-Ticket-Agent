@@ -1,7 +1,7 @@
 """Compliance gate: checks trade thesis against investment mandate via LLM."""
 import json
 from openai import OpenAI
-from .config import CRUSOE_BASE_URL, CRUSOE_API_KEY, CRUSOE_MODEL, MANDATE_PATH
+from .config import LLM_BASE_URL, LLM_API_KEY, LLM_MODEL, MANDATE_PATH
 
 _TOOL = {
     "type": "function",
@@ -58,7 +58,7 @@ def check_compliance(
     position_value: float,
 ) -> dict:
     mandate = load_mandate()
-    client = OpenAI(base_url=CRUSOE_BASE_URL, api_key=CRUSOE_API_KEY)
+    client = OpenAI(base_url=LLM_BASE_URL, api_key=LLM_API_KEY)
 
     prompt = (
         "You are a compliance officer at a long-only equity fund. "
@@ -75,7 +75,7 @@ def check_compliance(
     )
 
     response = client.chat.completions.create(
-        model=CRUSOE_MODEL,
+        model=LLM_MODEL,
         messages=[{"role": "user", "content": prompt}],
         tools=[_TOOL],
         tool_choice={"type": "function", "function": {"name": "compliance_decision"}},

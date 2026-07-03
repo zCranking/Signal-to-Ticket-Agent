@@ -1,7 +1,7 @@
-"""Event classifier: uses Crusoe LLM to classify 8-K filings via tool use."""
+"""Event classifier: classifies 8-K filings via LLM tool use."""
 import json
 from openai import OpenAI
-from .config import CRUSOE_BASE_URL, CRUSOE_API_KEY, CRUSOE_MODEL
+from .config import LLM_BASE_URL, LLM_API_KEY, LLM_MODEL
 
 EVENT_TYPES = [
     "earnings_beat",
@@ -59,7 +59,7 @@ _TOOL = {
 
 
 def get_llm_client() -> OpenAI:
-    return OpenAI(base_url=CRUSOE_BASE_URL, api_key=CRUSOE_API_KEY)
+    return OpenAI(base_url=LLM_BASE_URL, api_key=LLM_API_KEY)
 
 
 def classify_event(filing_text: str, ticker: str, filing_date: str) -> dict:
@@ -73,7 +73,7 @@ def classify_event(filing_text: str, ticker: str, filing_date: str) -> dict:
     )
 
     response = client.chat.completions.create(
-        model=CRUSOE_MODEL,
+        model=LLM_MODEL,
         messages=[{"role": "user", "content": prompt}],
         tools=[_TOOL],
         tool_choice={"type": "function", "function": {"name": "classify_filing"}},

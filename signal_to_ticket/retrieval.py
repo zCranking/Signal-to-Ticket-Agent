@@ -61,7 +61,7 @@ def retrieval_3_freshness(ticker: str, cik: str, key_facts: list[str]) -> dict:
     """Retrieval 3: most recent 10-Q/10-K to verify thesis facts aren't stale."""
     from .edgar import get_recent_filing_text
     from openai import OpenAI
-    from .config import CRUSOE_BASE_URL, CRUSOE_API_KEY, CRUSOE_MODEL
+    from .config import LLM_BASE_URL, LLM_API_KEY, LLM_MODEL
 
     filing_text = get_recent_filing_text(cik, form_types=["10-Q", "10-K"])
     if not filing_text:
@@ -102,7 +102,7 @@ def retrieval_3_freshness(ticker: str, cik: str, key_facts: list[str]) -> dict:
         },
     }
 
-    client = OpenAI(base_url=CRUSOE_BASE_URL, api_key=CRUSOE_API_KEY)
+    client = OpenAI(base_url=LLM_BASE_URL, api_key=LLM_API_KEY)
     prompt = (
         f"Verify whether these investment thesis facts for {ticker} are consistent "
         "with the company's most recent SEC filing.\n\n"
@@ -113,7 +113,7 @@ def retrieval_3_freshness(ticker: str, cik: str, key_facts: list[str]) -> dict:
     )
 
     response = client.chat.completions.create(
-        model=CRUSOE_MODEL,
+        model=LLM_MODEL,
         messages=[{"role": "user", "content": prompt}],
         tools=[tool],
         tool_choice={"type": "function", "function": {"name": "freshness_check"}},

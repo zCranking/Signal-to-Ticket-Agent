@@ -1,7 +1,13 @@
-"""Vector store: ChromaDB persistence + Vultr VultronRetriever embeddings (local fallback)."""
+"""
+Vector store: ChromaDB for persistence + local sentence-transformers for embeddings.
+
+VultronRetriever models (vultr/VultronRetriever*) are not served at the standard
+/embeddings endpoint — they're re-ranker/LLM models only. We use sentence-transformers
+locally for embedding and ChromaDB for ANN search, which is fast and reliable.
+"""
 from __future__ import annotations
 import chromadb
-from .config import CHROMA_PATH, VULTR_BASE_URL, VULTR_API_KEY, VULTR_EMBED_MODEL
+from .config import CHROMA_PATH
 
 _collection = None
 _local_model = None
@@ -20,17 +26,8 @@ def _get_collection():
 
 
 def embed(text: str) -> list[float]:
-    """Embed text via Vultr VultronRetriever; fall back to local sentence-transformers."""
-    if VULTR_BASE_URL and VULTR_API_KEY:
-        return _vultr_embed(text)
+    """Embed text using local sentence-transformers (all-MiniLM-L6-v2)."""
     return _local_embed(text)
-
-
-def _vultr_embed(text: str) -> list[float]:
-    from openai import OpenAI
-    client = OpenAI(base_url=VULTR_BASE_URL, api_key=VULTR_API_KEY)
-    resp = client.embeddings.create(model=VULTR_EMBED_MODEL, input=text)
-    return resp.data[0].embedding
 
 
 def _local_embed(text: str) -> list[float]:
