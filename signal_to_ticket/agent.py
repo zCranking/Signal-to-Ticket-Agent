@@ -61,9 +61,14 @@ def run_agent(
                 return {"status": "ERROR", "reason": f"No 8-K found on EDGAR for {ticker}"}
             filing = filings[0]
 
-        filing_text = fetch_filing_text(
-            filing["cik"], filing["accession"], filing.get("primary_document", "")
-        )
+        # Demo mode: pre-loaded text is injected via the filing dict to bypass live EDGAR
+        if filing.get("_pre_loaded_text"):
+            filing_text = filing["_pre_loaded_text"]
+        else:
+            filing_text = fetch_filing_text(
+                filing["cik"], filing["accession"], filing.get("primary_document", "")
+            )
+
         if not filing_text.strip():
             emit("fetch_filing", "error", {"reason": "Filing text empty"})
             return {"status": "ERROR", "reason": "Could not extract text from filing"}

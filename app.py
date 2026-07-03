@@ -295,25 +295,7 @@ if run_btn:
         with pipeline_placeholder.container():
             render_steps(st.session_state.step_states, st.session_state.step_data)
 
-    # Patch agent for pre-loaded demo text
-    if filing_arg and filing_arg.get("_pre_loaded_text"):
-        import signal_to_ticket.edgar as _edgar_mod
-        _orig_fetch = _edgar_mod.fetch_filing_text
-        _preloaded = filing_arg.pop("_pre_loaded_text")
-
-        def _patched_fetch(cik, accession, primary_document=""):
-            return _preloaded
-
-        _edgar_mod.fetch_filing_text = _patched_fetch
-
-    try:
-        result = run_agent(ticker=ticker_input, filing=filing_arg, on_step=on_step)
-    finally:
-        if filing_arg and "_pre_loaded_text" not in filing_arg:
-            try:
-                _edgar_mod.fetch_filing_text = _orig_fetch
-            except Exception:
-                pass
+    result = run_agent(ticker=ticker_input, filing=filing_arg, on_step=on_step)
 
     st.session_state.result = result
 
