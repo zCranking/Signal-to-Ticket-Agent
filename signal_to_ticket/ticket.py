@@ -1,5 +1,6 @@
 """Trade ticket memo generator: emits structured ticket with citation trail."""
 import json
+import re
 from datetime import datetime, timezone
 from openai import OpenAI
 from .config import LLM_BASE_URL, LLM_API_KEY, LLM_MODEL
@@ -130,13 +131,25 @@ def generate_ticket(
         model=LLM_MODEL,
         messages=[{"role": "user", "content": prompt}],
         tools=[_TOOL],
-        tool_choice={"type": "function", "function": {"name": "emit_trade_ticket"}},
+        tool_choice="required",
         temperature=0.2,
-        max_tokens=1500,
+        max_tokens=2000,
     )
 
-    tool_call = response.choices[0].message.tool_calls[0]
-    llm_out = json.loads(tool_call.function.arguments)
+    tc = response.choices[0].message.tool_calls
+    if tc:
+        llm_out = json.loads(tc[0].function.arguments)
+    else:
+        # vLLM returned content instead of a tool call — extract the JSON block
+        content = response.choices[0].message.content or ""
+        match = re.search(r'\{[\s\S]*\}', content)
+        if not match:
+            raise ValueError(
+                f"LLM returned no tool call and no JSON. "
+                f"finish_reason={response.choices[0].finish_reason!r} "
+                f"content={content[:200]!r}"
+            )
+        llm_out = json.loads(match.group())
 
     shares = int(sizing.get("position_value", 0) / current_price) if current_price > 0 else 0
     stop_loss_price = round(current_price * (1 - llm_out.get("stop_loss_pct", 0.07)), 2)

@@ -76,13 +76,22 @@ def classify_event(filing_text: str, ticker: str, filing_date: str) -> dict:
         model=LLM_MODEL,
         messages=[{"role": "user", "content": prompt}],
         tools=[_TOOL],
-        tool_choice={"type": "function", "function": {"name": "classify_filing"}},
+        tool_choice="required",
         temperature=0.1,
         max_tokens=1024,
     )
 
-    tool_call = response.choices[0].message.tool_calls[0]
-    result = json.loads(tool_call.function.arguments)
+    import re
+    tc = response.choices[0].message.tool_calls
+    if tc:
+        result = json.loads(tc[0].function.arguments)
+    else:
+        content = response.choices[0].message.content or ""
+        match = re.search(r'\{[\s\S]*\}', content)
+        if not match:
+            raise ValueError(f"Classifier returned no tool call. content={content[:200]!r}")
+        result = json.loads(match.group())
+
     result["ticker"] = ticker
     result["filing_date"] = filing_date
     return result

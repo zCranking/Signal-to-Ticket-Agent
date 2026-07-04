@@ -116,10 +116,20 @@ def retrieval_3_freshness(ticker: str, cik: str, key_facts: list[str]) -> dict:
         model=LLM_MODEL,
         messages=[{"role": "user", "content": prompt}],
         tools=[tool],
-        tool_choice={"type": "function", "function": {"name": "freshness_check"}},
+        tool_choice="required",
         temperature=0.0,
-        max_tokens=768,
+        max_tokens=1024,
     )
 
-    tool_call = response.choices[0].message.tool_calls[0]
-    return json.loads(tool_call.function.arguments)
+    tc = response.choices[0].message.tool_calls
+    if tc:
+        return json.loads(tc[0].function.arguments)
+
+    # vLLM returned content — try to parse JSON from it
+    import re
+    content = response.choices[0].message.content or ""
+    match = re.search(r'\{[\s\S]*\}', content)
+    if match:
+        return json.loads(match.group())
+
+    return {"status": "UNKNOWN", "checks": [], "staleness_reason": "LLM returned unstructured response"}

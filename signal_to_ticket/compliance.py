@@ -78,10 +78,17 @@ def check_compliance(
         model=LLM_MODEL,
         messages=[{"role": "user", "content": prompt}],
         tools=[_TOOL],
-        tool_choice={"type": "function", "function": {"name": "compliance_decision"}},
+        tool_choice="required",
         temperature=0.0,
-        max_tokens=512,
+        max_tokens=768,
     )
 
-    tool_call = response.choices[0].message.tool_calls[0]
-    return json.loads(tool_call.function.arguments)
+    import re
+    tc = response.choices[0].message.tool_calls
+    if tc:
+        return json.loads(tc[0].function.arguments)
+    content = response.choices[0].message.content or ""
+    match = re.search(r'\{[\s\S]*\}', content)
+    if not match:
+        raise ValueError(f"Compliance gate returned no tool call. content={content[:200]!r}")
+    return json.loads(match.group())
