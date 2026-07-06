@@ -126,22 +126,25 @@ def run_agent(
         analogues = {"analogues": [], "median_1d": 0.0, "median_5d": 0.02, "median_20d": 0.03, "sample_size": 0}
         emit("retrieval_analogues", "warning", {"error": str(e), "fallback": "empty analogues"})
 
-    # ── Step 4: Retrieval 2 — Mandate (pre-check) ────────────────────────────
+    # ── Step 4: Retrieval 2 — Mandate (instant restricted-list pre-check) ────
     emit("retrieval_mandate", "running")
     try:
         mandate_data = retrieval_2_mandate(ticker, classification.get("sector_relevance", ""))
-        emit("retrieval_mandate", "done", {"pre_check": mandate_data["pre_check"]})
     except Exception as e:
         emit("retrieval_mandate", "error", {"error": str(e)})
         return {"status": "ERROR", "reason": f"Mandate retrieval failed: {e}"}
 
     if mandate_data["pre_check"] == "RESTRICTED":
-        emit("compliance_gate", "killed", {"reason": mandate_data["reason"]})
+        # Killed here, at the free set-membership check — the LLM compliance
+        # gate (step 6) never runs, since there's nothing left for it to judge.
+        emit("retrieval_mandate", "killed", {"reason": mandate_data["reason"]})
         return {
             "status": "KILLED",
             "reason": mandate_data["reason"],
             "stage": "mandate_pre_check",
         }
+
+    emit("retrieval_mandate", "done", {"pre_check": mandate_data["pre_check"]})
 
     # ── Step 5: Size position ─────────────────────────────────────────────────
     emit("size_position", "running")

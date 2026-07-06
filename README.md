@@ -37,11 +37,19 @@ flowchart TD
 | 1. Fetch | Pull the 8-K text from SEC EDGAR | EDGAR REST API (free) |
 | 2. Classify | Event type, key facts, sentiment | LLM tool use |
 | 3. Analogues | Top-5 similar historical events + their 1d/5d/20d price reactions | ChromaDB + sentence-transformers |
-| 4. Mandate | Load fund rules, instant restricted-list check | Local JSON, no LLM |
+| 4. Mandate pre-check | Load fund rules, instant restricted-ticker/sector lookup — a KILL here never reaches the LLM | Local JSON, no LLM |
 | 5. Size | Half-Kelly fraction, scaled down when HV20 > 20% | yfinance + math |
-| 6. Compliance | LLM reads the full mandate against the proposed trade — hard KILL on violations | LLM tool use |
+| 6. Compliance gate | LLM reads the full mandate against the proposed trade — hard KILL on violations | LLM tool use |
 | 7. Freshness | Are the thesis facts consistent with the latest 10-Q/10-K? | EDGAR + LLM |
 | 8. Ticket | Direction, entry, stop, target, confidence, citation trail | LLM tool use |
+
+**Steps 4 and 6 are two different gates, not one.** Step 4 is a free, instant
+set-membership check — no model involved, and a kill there (e.g. a restricted
+ticker) never reaches step 6 at all. Step 5 (sizing) and step 6 (the LLM gate)
+simply never run. Step 6 exists for the softer judgment calls a plain lookup
+can't make: sector caps, position limits, interpreting a rule against a
+free-text thesis. Watch the pipeline trace in the UI — a kill on step 4 vs.
+step 6 tells you which kind of rule stopped the trade.
 
 ## Quickstart
 
@@ -110,6 +118,16 @@ provider quirk degrades gracefully instead of crashing the run.
 More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and
 [DECISIONS.md](DECISIONS.md).
 
+## Documentation map
+
+| File | What's in it |
+|------|--------------|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Full pipeline walkthrough, failure philosophy, known limitations |
+| [DECISIONS.md](DECISIONS.md) | ADRs for the non-obvious technical choices, with context and consequences |
+| [ROADMAP.md](ROADMAP.md) | What it would take to turn this into a real, backtested trading strategy |
+| [SKILLS.md](SKILLS.md) | Task-oriented playbooks: seeding, testing, adding events, debugging |
+| [CLAUDE.md](CLAUDE.md) | Context for AI coding assistants working in this repo |
+
 ## Project layout
 
 ```
@@ -141,6 +159,18 @@ python -m pytest tests/ -v
 
 The suite mocks all LLM and embedding calls — no API keys or model downloads
 needed.
+
+## What this is — and isn't — yet
+
+This is a working demonstration of the *reasoning chain*: classification →
+evidence retrieval → sizing → compliance → freshness → ticket, with every step
+inspectable and every kill explained. What it is not, yet, is a validated
+trading strategy — the analogue dataset is 50 hand-picked historical events
+chosen for sector diversity and demo value, not a statistically tested,
+survivorship-bias-free backtest. [ROADMAP.md](ROADMAP.md) lays out exactly
+what that would take, starting with backtesting the core thesis against a real
+historical filing corpus before any live-trading infrastructure is worth
+building.
 
 ## Disclaimer
 

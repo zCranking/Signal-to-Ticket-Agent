@@ -40,6 +40,11 @@ st.markdown("""
                 font-weight: 800; font-size: 1.1rem; border: 1px solid #ffd700; }
   .metric-label { color: #888; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; }
   .metric-value { font-size: 1.4rem; font-weight: 700; margin-top: 2px; }
+  .stat-grid  { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+                gap: 12px; margin: 10px 0 16px; }
+  .stat-tile  { background: #10151c; border: 1px solid #1e2733; border-radius: 8px;
+                padding: 10px 14px; overflow: visible; }
+  .stat-tile .metric-value { white-space: nowrap; overflow: visible; }
   .citation    { background: #12181f; border-left: 3px solid #4488cc; padding: 8px 12px;
                  margin: 5px 0; border-radius: 0 6px 6px 0; font-size: 0.83rem; }
   .peer-up   { color: #00d48a; font-weight: 600; }
@@ -53,9 +58,9 @@ STEP_LABELS = {
     "fetch_filing":        "1  Fetch Filing from EDGAR",
     "classify_event":      "2  Classify Event (LLM)",
     "retrieval_analogues": "3  Retrieve Historical Analogues",
-    "retrieval_mandate":   "4  Load Governing Documents",
+    "retrieval_mandate":   "4  Mandate Pre-Check (restricted list — instant, no LLM)",
     "size_position":       "5  Size Position (Kelly + HV20)",
-    "compliance_gate":     "6  Compliance Gate",
+    "compliance_gate":     "6  Compliance Gate (LLM vs full mandate)",
     "freshness_check":     "7  Freshness Check (Recent Filings)",
     "generate_ticket":     "8  Generate Trade Ticket",
 }
@@ -124,6 +129,21 @@ def render_steps(step_states: dict, step_data: dict):
         )
 
 
+def render_stat_grid(items: list[tuple[str, str]]):
+    """Render label/value tiles in a CSS grid that wraps instead of truncating.
+
+    st.metric's native columns squeeze evenly regardless of content, so a wide
+    dollar figure in a 5-column row gets clipped. A grid with a minimum tile
+    width wraps to a new row instead, keeping every number fully visible.
+    """
+    tiles = "".join(
+        f'<div class="stat-tile"><div class="metric-label">{label}</div>'
+        f'<div class="metric-value">{value}</div></div>'
+        for label, value in items
+    )
+    st.markdown(f'<div class="stat-grid">{tiles}</div>', unsafe_allow_html=True)
+
+
 def render_confidence_gauge(confidence: int):
     color = conf_color(confidence)
     fig = go.Figure(go.Indicator(
@@ -149,8 +169,8 @@ def render_confidence_gauge(confidence: int):
         },
     ))
     fig.update_layout(
-        height=170,
-        margin=dict(t=24, b=6, l=24, r=24),
+        height=190,
+        margin=dict(t=30, b=10, l=30, r=30),
         paper_bgcolor="rgba(0,0,0,0)",
         font={"color": "#e8e8e8"},
     )
@@ -204,17 +224,13 @@ def render_ticket(ticket: dict):
     st.markdown("**Thesis**")
     st.info(ticket.get("thesis", ""))
 
-    m1, m2, m3, m4, m5 = st.columns(5)
-    with m1:
-        st.metric("Entry Price", f"${ticket.get('entry_price', 0):,.2f}")
-    with m2:
-        st.metric("Shares", f"{ticket.get('shares', 0):,}")
-    with m3:
-        st.metric("Position", f"${ticket.get('position_value_usd', 0):,.0f}")
-    with m4:
-        st.metric("Stop Loss", f"${ticket.get('stop_loss', 0):,.2f}")
-    with m5:
-        st.metric("Target", f"${ticket.get('price_target', 0):,.2f}")
+    render_stat_grid([
+        ("Entry Price", f"${ticket.get('entry_price', 0):,.2f}"),
+        ("Shares", f"{ticket.get('shares', 0):,}"),
+        ("Position", f"${ticket.get('position_value_usd', 0):,.0f}"),
+        ("Stop Loss", f"${ticket.get('stop_loss', 0):,.2f}"),
+        ("Target", f"${ticket.get('price_target', 0):,.2f}"),
+    ])
 
     col_a, col_b = st.columns(2)
     with col_a:
@@ -231,11 +247,12 @@ def render_ticket(ticket: dict):
     top_analogues = analogue_summary.get("top_analogues", [])
     if analogue_summary.get("sample_size", 0) > 0:
         st.markdown("**Analogue Baseline**")
-        ac1, ac2, ac3, ac4 = st.columns(4)
-        ac1.metric("Sample Size", analogue_summary.get("sample_size", 0))
-        ac2.metric("Median +1d", analogue_summary.get("median_1d_return", "—"))
-        ac3.metric("Median +5d", analogue_summary.get("median_5d_return", "—"))
-        ac4.metric("Median +20d", analogue_summary.get("median_20d_return", "—"))
+        render_stat_grid([
+            ("Sample Size", str(analogue_summary.get("sample_size", 0))),
+            ("Median +1d", analogue_summary.get("median_1d_return", "—")),
+            ("Median +5d", analogue_summary.get("median_5d_return", "—")),
+            ("Median +20d", analogue_summary.get("median_20d_return", "—")),
+        ])
 
         if top_analogues:
             st.dataframe(
@@ -283,11 +300,18 @@ def render_ticket(ticket: dict):
     )
 
 
+KILL_STAGE_LABELS = {
+    "mandate_pre_check": "Step 4 — Mandate Pre-Check (instant restricted-list lookup, no LLM involved)",
+    "compliance_gate": "Step 6 — Compliance Gate (LLM judged the trade against the full mandate)",
+}
+
+
 def render_kill(result: dict):
+    stage_label = KILL_STAGE_LABELS.get(result.get("stage", ""), result.get("stage", "unknown"))
     st.markdown(
         f'<div class="kill-box">'
         f'<span style="color:#ff4444;font-size:1.2rem;font-weight:800">TRADE KILLED</span><br><br>'
-        f'<strong>Stage:</strong> {result.get("stage", "unknown")}<br>'
+        f'<strong>Stage:</strong> {stage_label}<br>'
         f'<strong>Reason:</strong> {result.get("reason", "")}'
         + (f'<br><br><em>Mandate rule: {result["mandate_excerpt"]}</em>' if result.get("mandate_excerpt") else "")
         + "</div>",
@@ -363,7 +387,7 @@ if "step_states" not in st.session_state:
 tab_run, tab_history = st.tabs(["Agent Run", f"History ({len(st.session_state.history)})"])
 
 with tab_run:
-    col_pipeline, col_result = st.columns([1, 1.6], gap="large")
+    col_pipeline, col_result = st.columns([1, 2], gap="large")
 
     with col_pipeline:
         st.markdown("#### Agent Pipeline")
