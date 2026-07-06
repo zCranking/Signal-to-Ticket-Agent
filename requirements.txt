@@ -1,19 +1,18 @@
 # LLM / API
 openai>=1.30.0
-python-dotenv
+python-dotenv>=1.0.0
 
-# Vector store
+# Vector store + local embeddings
 chromadb>=0.5.0
-
-# Embeddings fallback (used when Vultr not yet configured)
 sentence-transformers>=3.0.0
 
 # Financial data
-yfinance
-pandas
+yfinance>=0.2.40
+pandas>=2.0.0
 
 # HTTP
-requests
+requests>=2.31.0
 
 # UI
 streamlit>=1.35.0
+plotly>=5.20.0

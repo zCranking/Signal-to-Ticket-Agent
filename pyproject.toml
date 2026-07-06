@@ -1,0 +1,31 @@
+[project]
+name = "signal-to-ticket"
+version = "0.1.0"
+description = "Event-driven trade agent: SEC 8-K filings in, compliance-gated trade tickets out"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+dependencies = [
+    "openai>=1.30.0",
+    "python-dotenv>=1.0.0",
+    "chromadb>=0.5.0",
+    "sentence-transformers>=3.0.0",
+    "yfinance>=0.2.40",
+    "pandas>=2.0.0",
+    "requests>=2.31.0",
+    "streamlit>=1.35.0",
+    "plotly>=5.20.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.4.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
