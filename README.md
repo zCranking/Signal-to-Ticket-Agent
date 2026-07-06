@@ -1,122 +1,148 @@
 # Signal-to-Ticket
 
-An event-driven quant trade agent. An 8-K filing drops → the agent classifies it, retrieves historical analogues, gates against the investment mandate, sizes the position with Kelly criterion, and emits a trade ticket with a confidence score and citation trail.
+[![tests](https://github.com/zCranking/Signal-to-Ticket-Agent/actions/workflows/test.yml/badge.svg)](https://github.com/zCranking/Signal-to-Ticket-Agent/actions/workflows/test.yml)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-## Setup (do this once)
+An event-driven trade agent. When a company files an 8-K — earnings, a guidance
+revision, a material event — the stock often moves 5–20% within hours, and most
+of that move happens before a human has finished reading the filing. This agent
+reads it first: it classifies the event, pulls historical analogues with known
+price reactions, sizes a position with the Kelly criterion, runs the idea past a
+fund mandate, and emits a structured trade ticket with a confidence score and a
+citation trail — or kills the trade and tells you exactly which rule it broke.
 
-### 1. Install dependencies
+The interesting part isn't any single step; it's that the agent has to *earn*
+the ticket. A bullish earnings beat on a restricted ticker dies at the mandate
+gate. A thesis built on stale facts gets flagged by the freshness check. Nothing
+reaches the ticket stage on vibes.
+
+## Pipeline
+
+```mermaid
+flowchart TD
+    A[SEC EDGAR 8-K] --> B[Text Extraction]
+    B --> C{"LLM Classifier<br/>earnings_beat / guidance_cut / M&A / ..."}
+    C -->|neutral| X[Skip — no signal]
+    C --> D["Vector Search<br/>ChromaDB · 50 historical analogues"]
+    D --> E["Kelly Sizer<br/>half-Kelly · HV20 vol-scaling"]
+    E --> F{"LLM Compliance Gate<br/>vs fund mandate"}
+    F -->|KILL| G[Trade blocked + rule citation]
+    F -->|PASS| H["Freshness Check<br/>vs latest 10-Q / 10-K"]
+    H --> I["Trade Ticket<br/>direction · size · confidence · citations"]
+```
+
+| Step | What happens | Powered by |
+|------|--------------|-----------|
+| 1. Fetch | Pull the 8-K text from SEC EDGAR | EDGAR REST API (free) |
+| 2. Classify | Event type, key facts, sentiment | LLM tool use |
+| 3. Analogues | Top-5 similar historical events + their 1d/5d/20d price reactions | ChromaDB + sentence-transformers |
+| 4. Mandate | Load fund rules, instant restricted-list check | Local JSON, no LLM |
+| 5. Size | Half-Kelly fraction, scaled down when HV20 > 20% | yfinance + math |
+| 6. Compliance | LLM reads the full mandate against the proposed trade — hard KILL on violations | LLM tool use |
+| 7. Freshness | Are the thesis facts consistent with the latest 10-Q/10-K? | EDGAR + LLM |
+| 8. Ticket | Direction, entry, stop, target, confidence, citation trail | LLM tool use |
+
+## Quickstart
+
 ```bash
+git clone https://github.com/zCranking/Signal-to-Ticket-Agent.git
+cd Signal-to-Ticket-Agent
 pip install -r requirements.txt
-```
 
-### 2. Configure environment
-Copy `.env.example` to `.env` and fill in your keys:
-```bash
-cp .env.example .env
-```
+cp .env.example .env        # then fill in your LLM key (see below)
 
-Minimum required in `.env`:
-```
-LLM_PROVIDER=vultr
-VULTR_API_KEY=your_vultr_key
-VULTR_BASE_URL=https://api.vultrinference.com/v1/
-VULTR_LLM_MODEL=deepseek-ai/DeepSeek-V4-Flash
-```
-
-### 3. Seed the vector database
-Run once to load 20 historical 8-K events into ChromaDB:
-```bash
-python seed.py
-```
-
-### 4. Launch the app
-```bash
+python seed.py              # one-time: load 50 historical analogues into ChromaDB
 streamlit run app.py
 ```
 
----
-
-## How it works
-
-The agent runs an 8-step pipeline on each event:
+Minimum `.env`:
 
 ```
-8-K Filing
-    │
-    ▼
-Step 1  EDGAR Fetch      — Download filing text from SEC EDGAR
-    │
-    ▼
-Step 2  Classify Event   — LLM: earnings_beat / guidance_raise / merger / etc.
-    │
-    ▼
-Step 3  Retrieval 1      — Vector search: top-5 historical analogues + price reactions
-    │
-    ▼
-Step 4  Retrieval 2      — Load investment mandate, instant restricted-list check
-    │
-    ▼
-Step 5  Size Position    — HV20 volatility + half-Kelly criterion
-    │
-    ▼
-Step 6  Compliance Gate  — LLM vs mandate: PASS → continue, KILL → stop here
-    │
-    ▼
-Step 7  Retrieval 3      — LLM checks recent 10-Q/10-K: are thesis facts still fresh?
-    │
-    ▼
-Step 8  Trade Ticket     — Thesis + confidence score + citation trail
+LLM_PROVIDER=vultr
+VULTR_API_KEY=your_key
+VULTR_BASE_URL=https://api.vultrinference.com/v1/
+VULTR_LLM_MODEL=deepseek-ai/DeepSeek-V4-Flash
+EDGAR_USER_AGENT=your-app-name (you@example.com)
 ```
 
-## File overview
+Any OpenAI-compatible endpoint works — set `LLM_PROVIDER=crusoe` and the
+`CRUSOE_*` variables to switch providers without touching code. Embeddings run
+locally (`all-MiniLM-L6-v2`), so no embedding API is needed.
 
-| File | Purpose |
-|------|---------|
-| `signal_to_ticket/agent.py` | Main pipeline orchestrator |
-| `signal_to_ticket/config.py` | All config and env vars |
-| `signal_to_ticket/edgar.py` | SEC EDGAR API client |
-| `signal_to_ticket/classifier.py` | Event type classification (LLM tool use) |
-| `signal_to_ticket/vector_store.py` | ChromaDB + sentence-transformers |
-| `signal_to_ticket/retrieval.py` | Three retrieval functions |
-| `signal_to_ticket/compliance.py` | Compliance gate (LLM vs mandate) |
-| `signal_to_ticket/sizer.py` | Position sizing (Kelly + HV20) |
-| `signal_to_ticket/ticket.py` | Trade ticket generation (LLM) |
-| `app.py` | Streamlit demo UI |
-| `seed.py` | One-time ChromaDB seed script |
-| `data/mandate.json` | Investment mandate rules |
-| `data/demo_events.json` | Pre-loaded events for reliable demo |
-| `data/seed_analogues.json` | Historical 8-K events with price reactions |
+## Demo mode
 
-## LLM providers
+The sidebar ships with five pre-loaded events so the demo never depends on
+EDGAR uptime or rate limits:
 
-The active LLM is controlled by `LLM_PROVIDER` in `.env`:
+- **NVDA Q3 FY2025** — a clean earnings beat, the happy path end to end
+- **AMD Q3 2024** — guidance cut, bearish classification
+- **AMZN Q2 2024** — operating income beat with mixed revenue
+- **META Q3 2024** — beats on everything, *and gets killed*: META is on the
+  mandate's restricted list, so the agent blocks the trade no matter how
+  bullish the signal. This is the run worth watching.
+- **INTC Q2 2024** — guidance cut + dividend suspension, a -26% event
 
-| Provider | Status | Model |
-|----------|--------|-------|
-| `vultr` (default) | Working | `deepseek-ai/DeepSeek-V4-Flash` |
-| `crusoe` | Needs valid key | `meta-llama/Llama-3.3-70B-Instruct` |
+"Live ticker" mode fetches the most recent real 8-K for any ticker from EDGAR.
 
-Embeddings always use local `sentence-transformers` (no API key needed).
+## Design decisions
 
-## Switching to Crusoe
+**Half-Kelly, not full Kelly.** Full Kelly maximizes long-run growth but is
+brutally sensitive to errors in the win-rate estimate — and our p_win comes
+from a handful of analogues. Half-Kelly keeps ~75% of the growth rate at half
+the drawdown, which is why it's the systematic-fund default. Size is further
+scaled down when 20-day realized vol runs above a 20% baseline.
 
-Once you have a working Crusoe API key, update `.env`:
+**Local embeddings, not an API.** At 50 analogues, a local MiniLM model
+embeds a query in milliseconds with zero network dependency. An embedding API
+adds latency and a failure mode for no retrieval-quality gain at this scale.
+
+**The compliance gate is an LLM, but the pre-check isn't.** Restricted-ticker
+matching is a set lookup — an LLM adds nothing but latency and risk there. The
+LLM handles what actually needs judgment: sector caps, position limits, and
+rule interpretation against a free-text thesis.
+
+**Structured output with a fallback parser.** vLLM deployments vary in how
+reliably they honor `tool_choice` on complex schemas. Every LLM call requests a
+tool call but falls back to extracting a JSON block from raw content, so a
+provider quirk degrades gracefully instead of crashing the run.
+
+More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and
+[DECISIONS.md](DECISIONS.md).
+
+## Project layout
+
 ```
-LLM_PROVIDER=crusoe
-CRUSOE_API_KEY=your_working_key
+signal_to_ticket/
+  agent.py         # 8-step pipeline orchestrator
+  classifier.py    # event classification (LLM tool use)
+  compliance.py    # mandate gate (LLM + instant pre-check)
+  config.py        # env + provider switching
+  edgar.py         # SEC EDGAR client + filing text extraction
+  retrieval.py     # analogues / mandate / freshness retrievals
+  sizer.py         # half-Kelly + HV20 vol scaling
+  ticket.py        # trade ticket generation (LLM)
+  vector_store.py  # ChromaDB + local sentence-transformers
+app.py             # Streamlit UI with live pipeline trace
+seed.py            # one-time analogue DB seeding
+data/
+  mandate.json         # fund rules: restricted lists, caps, risk limits
+  seed_analogues.json  # 50 historical events with measured price reactions
+  demo_events.json     # pre-loaded demo filings
+tests/               # unit tests (LLM + embeddings mocked)
 ```
 
-## Demo tips
+## Running tests
 
-- Use **Demo event** mode in the sidebar for a reliable presentation (pre-loaded filing text, no EDGAR dependency)
-- Seed ChromaDB before the demo: `python seed.py`
-- NVDA earnings beat is the most impressive demo event — large analogue set, strong price reaction history
+```bash
+pip install pytest
+python -m pytest tests/ -v
+```
 
-## Tech stack
+The suite mocks all LLM and embedding calls — no API keys or model downloads
+needed.
 
-- **LLM**: Vultr Serverless Inference (DeepSeek-V4-Flash)
-- **Embeddings**: sentence-transformers (all-MiniLM-L6-v2, local)
-- **Vector DB**: ChromaDB (persistent, local)
-- **Data**: SEC EDGAR API (free, no key)
-- **Prices**: yfinance
-- **UI**: Streamlit
+## Disclaimer
+
+This is a research prototype. Nothing it emits is investment advice, and the
+analogue dataset is a curated sample, not a survivorship-bias-free backtest.
