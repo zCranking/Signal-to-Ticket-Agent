@@ -1,9 +1,10 @@
 """Signal-to-Ticket | Streamlit demo UI."""
 import json
 import sys
-import time
+from datetime import datetime
 from pathlib import Path
 
+import plotly.graph_objects as go
 import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -28,6 +29,7 @@ st.markdown("""
   .step-done  { background: #0d1f18; color: #00d48a; border-left: 3px solid #00d48a; }
   .step-warn  { background: #1f1a0d; color: #ffa500; border-left: 3px solid #ffa500; }
   .step-kill  { background: #1f0d0d; color: #ff4444; border-left: 3px solid #ff4444; }
+  .step-time  { color: #667; font-size: 0.78rem; float: right; }
   .ticket-box { border: 1.5px solid #00d48a; border-radius: 10px; padding: 22px; background: #0a0f0a; }
   .kill-box   { border: 1.5px solid #ff4444; border-radius: 10px; padding: 22px; background: #1a0505; }
   .badge-buy  { background: #00d48a22; color: #00d48a; padding: 4px 14px; border-radius: 20px;
@@ -40,6 +42,10 @@ st.markdown("""
   .metric-value { font-size: 1.4rem; font-weight: 700; margin-top: 2px; }
   .citation    { background: #12181f; border-left: 3px solid #4488cc; padding: 8px 12px;
                  margin: 5px 0; border-radius: 0 6px 6px 0; font-size: 0.83rem; }
+  .peer-up   { color: #00d48a; font-weight: 600; }
+  .peer-down { color: #ff4444; font-weight: 600; }
+  .peer-chip { background: #12181f; border-radius: 6px; padding: 6px 12px; margin: 3px;
+               display: inline-block; font-size: 0.85rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -72,6 +78,15 @@ STEP_CLASSES = {
     "error":   "step-kill",
 }
 
+CONF_BANDS = [(65, "#00d48a"), (45, "#ffd700"), (0, "#ff4444")]
+
+
+def conf_color(score: float) -> str:
+    for floor, color in CONF_BANDS:
+        if score >= floor:
+            return color
+    return CONF_BANDS[-1][1]
+
 
 def load_demo_events() -> list[dict]:
     with open(DEMO_EVENTS_PATH) as f:
@@ -90,7 +105,7 @@ def render_steps(step_states: dict, step_data: dict):
         if state == "done" and data:
             snippets = []
             for k, v in data.items():
-                if k not in ("error", "fallback", "skipped"):
+                if k not in ("error", "fallback", "skipped", "elapsed_s"):
                     snippets.append(f"{k}: {v}")
             if snippets:
                 detail = f" — {', '.join(snippets[:3])}"
@@ -99,10 +114,68 @@ def render_steps(step_states: dict, step_data: dict):
         elif state == "killed" and data.get("reason"):
             detail = f" — {data['reason']}"
 
+        timing = ""
+        if data.get("elapsed_s") is not None and state != "running":
+            timing = f'<span class="step-time">{data["elapsed_s"]:.1f}s</span>'
+
         st.markdown(
-            f'<div class="step-box {css}">{icon}  {label}{detail}</div>',
+            f'<div class="step-box {css}">{timing}{icon}  {label}{detail}</div>',
             unsafe_allow_html=True,
         )
+
+
+def render_confidence_gauge(confidence: int):
+    color = conf_color(confidence)
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=confidence,
+        number={"font": {"color": "#e8e8e8", "size": 40}, "suffix": "/100"},
+        gauge={
+            "axis": {
+                "range": [0, 100],
+                "tickcolor": "#556",
+                "tickfont": {"color": "#889", "size": 10},
+            },
+            "bar": {"color": color, "thickness": 0.35},
+            "bgcolor": "rgba(0,0,0,0)",
+            "borderwidth": 0,
+            # Low-alpha threshold bands; the printed number carries the value,
+            # color is a redundant status cue.
+            "steps": [
+                {"range": [0, 45], "color": "rgba(255, 68, 68, 0.10)"},
+                {"range": [45, 65], "color": "rgba(255, 215, 0, 0.10)"},
+                {"range": [65, 100], "color": "rgba(0, 212, 138, 0.10)"},
+            ],
+        },
+    ))
+    fig.update_layout(
+        height=170,
+        margin=dict(t=24, b=6, l=24, r=24),
+        paper_bgcolor="rgba(0,0,0,0)",
+        font={"color": "#e8e8e8"},
+    )
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+
+def render_peer_ripple(top_analogues: list[dict]):
+    """Average 1-day peer reactions across the matched analogues."""
+    peer_sums: dict[str, list[float]] = {}
+    for a in top_analogues:
+        for peer, reaction in (a.get("peer_reaction_1d") or {}).items():
+            peer_sums.setdefault(peer, []).append(float(reaction))
+    if not peer_sums:
+        return
+
+    st.markdown("**Peer Ripple Effect** — avg next-day peer moves in analogue events")
+    chips = []
+    for peer, vals in sorted(peer_sums.items(), key=lambda kv: -abs(sum(kv[1]) / len(kv[1]))):
+        avg = sum(vals) / len(vals)
+        cls = "peer-up" if avg >= 0 else "peer-down"
+        arrow = "▲" if avg >= 0 else "▼"
+        chips.append(
+            f'<span class="peer-chip">{peer} <span class="{cls}">{arrow} {avg:+.1%}</span></span>'
+        )
+    st.markdown(" ".join(chips), unsafe_allow_html=True)
 
 
 def render_ticket(ticket: dict):
@@ -112,7 +185,7 @@ def render_ticket(ticket: dict):
 
     st.markdown('<div class="ticket-box">', unsafe_allow_html=True)
 
-    col_dir, col_ticker, col_conf = st.columns([1, 2, 2])
+    col_dir, col_ticker, col_gauge = st.columns([1, 1.2, 2])
     with col_dir:
         st.markdown(f'<span class="{badge_class}">{direction}</span>', unsafe_allow_html=True)
     with col_ticker:
@@ -121,15 +194,12 @@ def render_ticket(ticket: dict):
             f'<div class="metric-value">{ticket["ticker"]}</div>',
             unsafe_allow_html=True,
         )
-    with col_conf:
-        conf_color = "#00d48a" if confidence >= 65 else ("#ffd700" if confidence >= 45 else "#ff4444")
         st.markdown(
-            f'<div class="metric-label">Confidence</div>'
-            f'<div class="metric-value" style="color:{conf_color}">{confidence}/100</div>',
+            f'<div class="metric-label" style="margin-top:8px">Confidence</div>',
             unsafe_allow_html=True,
         )
-
-    st.progress(confidence / 100)
+    with col_gauge:
+        render_confidence_gauge(confidence)
 
     st.markdown("**Thesis**")
     st.info(ticket.get("thesis", ""))
@@ -158,6 +228,7 @@ def render_ticket(ticket: dict):
             st.markdown(f"- {rf}")
 
     analogue_summary = ticket.get("analogue_summary", {})
+    top_analogues = analogue_summary.get("top_analogues", [])
     if analogue_summary.get("sample_size", 0) > 0:
         st.markdown("**Analogue Baseline**")
         ac1, ac2, ac3, ac4 = st.columns(4)
@@ -165,6 +236,24 @@ def render_ticket(ticket: dict):
         ac2.metric("Median +1d", analogue_summary.get("median_1d_return", "—"))
         ac3.metric("Median +5d", analogue_summary.get("median_5d_return", "—"))
         ac4.metric("Median +20d", analogue_summary.get("median_20d_return", "—"))
+
+        if top_analogues:
+            st.dataframe(
+                [
+                    {
+                        "Event": a.get("event", ""),
+                        "Ticker": a.get("ticker", ""),
+                        "Date": a.get("date", ""),
+                        "Similarity": a.get("similarity", 0),
+                        "+1d": a.get("1d_return", "—"),
+                        "+5d": a.get("5d_return", "—"),
+                    }
+                    for a in top_analogues
+                ],
+                use_container_width=True,
+                hide_index=True,
+            )
+            render_peer_ripple(top_analogues)
 
     if ticket.get("citations"):
         with st.expander("Citation Trail", expanded=True):
@@ -186,6 +275,13 @@ def render_ticket(ticket: dict):
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
+    st.download_button(
+        "⬇ Export Ticket JSON",
+        data=json.dumps(ticket, indent=2),
+        file_name=f"{ticket['ticker']}_{ticket.get('filing_date', 'ticket')}.json",
+        mime="application/json",
+    )
+
 
 def render_kill(result: dict):
     st.markdown(
@@ -197,6 +293,17 @@ def render_kill(result: dict):
         + "</div>",
         unsafe_allow_html=True,
     )
+
+
+def render_result(result: dict):
+    if result["status"] == "TICKET":
+        render_ticket(result["ticket"])
+    elif result["status"] == "KILLED":
+        render_kill(result)
+    elif result["status"] == "SKIPPED":
+        st.info(f"Skipped: {result.get('reason', '')}")
+    else:
+        st.error(f"Error: {result.get('reason', '')}")
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -225,7 +332,21 @@ with st.sidebar:
     run_btn = st.button("Run Agent", type="primary", use_container_width=True)
 
     st.divider()
-    st.caption("Partners: Crusoe · Vultr · SEC EDGAR")
+    with st.expander("How the agent works"):
+        st.markdown(
+            "The agent treats an 8-K filing as a trading signal and runs it through "
+            "an 8-step gauntlet before any ticket is issued.\n\n"
+            "**Sizing** uses the Kelly criterion at half strength — full Kelly is "
+            "growth-optimal but punishing when win-rate estimates are off, so "
+            "half-Kelly is the institutional norm. Size is then scaled down when "
+            "20-day realized volatility (HV20) runs above a 20% baseline.\n\n"
+            "**Analogues** come from a vector search over historical filing events "
+            "with known price reactions — the median 5-day move of the closest "
+            "matches anchors the expected return.\n\n"
+            "**Compliance** is a hard gate: an LLM reads the fund mandate and kills "
+            "any trade violating a hard rule, no matter how strong the signal."
+        )
+    st.caption("Data: SEC EDGAR · LLM: Vultr Serverless Inference · Vectors: ChromaDB")
 
 # ── Main panel ───────────────────────────────────────────────────────────────
 
@@ -233,41 +354,56 @@ st.markdown('<div class="main-title">Signal-to-Ticket</div>', unsafe_allow_html=
 st.markdown('<div class="sub-title">Event-driven trade agent · 8-K → compliance → ticket</div>', unsafe_allow_html=True)
 st.divider()
 
-col_pipeline, col_result = st.columns([1, 1.6], gap="large")
-
-with col_pipeline:
-    st.markdown("#### Agent Pipeline")
-    pipeline_placeholder = st.empty()
-
-with col_result:
-    st.markdown("#### Result")
-    result_placeholder = st.empty()
-
-# Initialize step display
 if "step_states" not in st.session_state:
     st.session_state.step_states = {s: "pending" for s in PIPELINE_STEPS}
     st.session_state.step_data = {s: {} for s in PIPELINE_STEPS}
     st.session_state.result = None
+    st.session_state.history = []
 
-with pipeline_placeholder.container():
-    render_steps(st.session_state.step_states, st.session_state.step_data)
+tab_run, tab_history = st.tabs(["Agent Run", f"History ({len(st.session_state.history)})"])
 
-if st.session_state.result:
-    with result_placeholder.container():
-        r = st.session_state.result
-        if r["status"] == "TICKET":
-            render_ticket(r["ticket"])
-        elif r["status"] == "KILLED":
-            render_kill(r)
-        elif r["status"] == "SKIPPED":
-            st.info(f"Skipped: {r.get('reason', '')}")
-        else:
-            st.error(f"Error: {r.get('reason', '')}")
+with tab_run:
+    col_pipeline, col_result = st.columns([1, 1.6], gap="large")
+
+    with col_pipeline:
+        st.markdown("#### Agent Pipeline")
+        pipeline_placeholder = st.empty()
+
+    with col_result:
+        st.markdown("#### Result")
+        result_placeholder = st.empty()
+
+    with pipeline_placeholder.container():
+        render_steps(st.session_state.step_states, st.session_state.step_data)
+
+    if st.session_state.result and not run_btn:
+        with result_placeholder.container():
+            render_result(st.session_state.result)
+
+with tab_history:
+    if not st.session_state.history:
+        st.caption("No runs yet this session.")
+    else:
+        st.dataframe(
+            [
+                {
+                    "Time": h["time"],
+                    "Ticker": h["ticker"],
+                    "Event": h["event_type"],
+                    "Outcome": h["outcome"],
+                    "Direction": h["direction"],
+                    "Confidence": h["confidence"],
+                    "Position": h["position"],
+                }
+                for h in reversed(st.session_state.history)
+            ],
+            use_container_width=True,
+            hide_index=True,
+        )
 
 # ── Agent execution ───────────────────────────────────────────────────────────
 
 if run_btn:
-    # Reset state
     st.session_state.step_states = {s: "pending" for s in PIPELINE_STEPS}
     st.session_state.step_data = {s: {} for s in PIPELINE_STEPS}
     st.session_state.result = None
@@ -285,7 +421,7 @@ if run_btn:
             "primary_document": selected_event.get("primary_document", ""),
             "items": selected_event.get("items", ""),
         }
-        # Inject pre-loaded text so we don't need live EDGAR for demo events
+        # Inject pre-loaded text so demo events never depend on live EDGAR
         if selected_event.get("use_pre_loaded_text") and selected_event.get("pre_loaded_text"):
             filing_arg["_pre_loaded_text"] = selected_event["pre_loaded_text"]
 
@@ -299,12 +435,17 @@ if run_btn:
 
     st.session_state.result = result
 
+    ticket = result.get("ticket", {})
+    st.session_state.history.append({
+        "time": datetime.now().strftime("%H:%M:%S"),
+        "ticker": ticker_input,
+        "event_type": st.session_state.step_data.get("classify_event", {}).get("event_type", "—"),
+        "outcome": result["status"],
+        "direction": ticket.get("direction", "—"),
+        "confidence": ticket.get("confidence_score", "—"),
+        "position": f"${ticket.get('position_value_usd', 0):,.0f}" if ticket else "—",
+    })
+    st.session_state.history = st.session_state.history[-8:]
+
     with result_placeholder.container():
-        if result["status"] == "TICKET":
-            render_ticket(result["ticket"])
-        elif result["status"] == "KILLED":
-            render_kill(result)
-        elif result["status"] == "SKIPPED":
-            st.info(f"Skipped: {result.get('reason', '')}")
-        else:
-            st.error(f"Error: {result.get('reason', '')}")
+        render_result(result)
