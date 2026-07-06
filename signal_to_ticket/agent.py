@@ -3,6 +3,8 @@ Signal-to-Ticket agent orchestration.
 Runs the 8-step pipeline: fetch → classify → analogues → mandate → size → comply → fresh → ticket
 """
 from __future__ import annotations
+
+import time
 from typing import Callable, Optional
 
 from .edgar import get_recent_8k, fetch_filing_text
@@ -47,9 +49,16 @@ def run_agent(
         reason: explanation string (when not TICKET)
     """
 
+    step_started: dict[str, float] = {}
+
     def emit(name: str, status: str = "running", data: dict = None):
+        data = data or {}
+        if status == "running":
+            step_started[name] = time.perf_counter()
+        elif name in step_started and "elapsed_s" not in data:
+            data["elapsed_s"] = round(time.perf_counter() - step_started[name], 2)
         if on_step:
-            on_step(name, status, data or {})
+            on_step(name, status, data)
 
     # ── Step 1: Fetch filing ──────────────────────────────────────────────────
     emit("fetch_filing", "running")

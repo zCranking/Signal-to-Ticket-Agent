@@ -39,7 +39,8 @@ MANDATE_PATH = DATA_DIR / "mandate.json"
 DEMO_EVENTS_PATH = DATA_DIR / "demo_events.json"
 SEED_ANALOGUES_PATH = DATA_DIR / "seed_analogues.json"
 
-EDGAR_USER_AGENT = "Signal-to-Ticket Hackathon Agent zcranking@gmail.com"
+# SEC requires a descriptive User-Agent with contact info for programmatic access
+EDGAR_USER_AGENT = os.getenv("EDGAR_USER_AGENT", "signal-to-ticket research agent (contact@example.com)")
 
 PORTFOLIO_VALUE = 5_000_000
 MAX_POSITION_VALUE = 500_000

@@ -37,6 +37,8 @@ def seed():
             "price_reaction_1d": event["price_reaction_1d"],
             "price_reaction_5d": event["price_reaction_5d"],
             "price_reaction_20d": event["price_reaction_20d"],
+            # ChromaDB metadata is scalar-only, so peer reactions ride along as JSON
+            "peer_reaction_1d": json.dumps(event.get("peer_reaction_1d", {})),
         }
 
         upsert_analogue(event["event_id"], text, metadata)

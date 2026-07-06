@@ -1,6 +1,9 @@
 """Compliance gate: checks trade thesis against investment mandate via LLM."""
 import json
+import re
+
 from openai import OpenAI
+
 from .config import LLM_BASE_URL, LLM_API_KEY, LLM_MODEL, MANDATE_PATH
 
 _TOOL = {
@@ -83,10 +86,10 @@ def check_compliance(
         max_tokens=768,
     )
 
-    import re
     tc = response.choices[0].message.tool_calls
     if tc:
         return json.loads(tc[0].function.arguments)
+    # Fallback for vLLM deployments that return arguments as plain content.
     content = response.choices[0].message.content or ""
     match = re.search(r'\{[\s\S]*\}', content)
     if not match:

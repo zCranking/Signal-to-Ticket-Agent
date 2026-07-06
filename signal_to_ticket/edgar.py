@@ -98,8 +98,35 @@ def get_recent_filing_text(cik: str, form_types: list[str] = None) -> str:
     return ""
 
 
+_ENTITIES = {
+    "&nbsp;": " ", "&amp;": "&", "&lt;": "<", "&gt;": ">",
+    "&quot;": '"', "&apos;": "'", "&#8217;": "'", "&#8220;": '"',
+    "&#8221;": '"', "&#8211;": "-", "&#8212;": "--",
+}
+
+
 def _strip_html(html: str) -> str:
-    text = re.sub(r"<[^>]+>", " ", html)
-    text = re.sub(r"&#?\w+;", " ", text)
-    text = re.sub(r"\s+", " ", text)
-    return text.strip()
+    """Reduce an EDGAR filing to prose the classifier can use.
+
+    Filings arrive as inline-XBRL HTML wrapped in SGML headers; most of the
+    byte count is markup and cover-page metadata, not disclosure text.
+    """
+    # Drop script/style blocks and SGML/XBRL header sections entirely
+    text = re.sub(r"<(script|style)[^>]*>[\s\S]*?</\1>", " ", html, flags=re.IGNORECASE)
+    text = re.sub(r"<\?xml[\s\S]*?\?>", " ", text)
+    text = re.sub(r"<(SEC-HEADER|IMS-HEADER)[\s\S]*?</\1>", " ", text, flags=re.IGNORECASE)
+
+    text = re.sub(r"<[^>]+>", " ", text)
+
+    for entity, char in _ENTITIES.items():
+        text = text.replace(entity, char)
+    text = re.sub(r"&#?\w+;", " ", text)  # remaining entities
+
+    text = re.sub(r"\s+", " ", text).strip()
+
+    # Skip past the cover page to the first Item disclosure when present
+    match = re.search(r"Item\s+\d+\.\d+", text)
+    if match and match.start() > 200:
+        text = text[match.start():]
+
+    return text

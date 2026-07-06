@@ -62,6 +62,16 @@ _TOOL = {
 }
 
 
+def _parse_peers(raw) -> dict:
+    """Peer reactions are stored as a JSON string in ChromaDB metadata."""
+    if not raw:
+        return {}
+    try:
+        return json.loads(raw) if isinstance(raw, str) else dict(raw)
+    except (json.JSONDecodeError, TypeError):
+        return {}
+
+
 def generate_ticket(
     ticker: str,
     event_type: str,
@@ -94,9 +104,12 @@ def generate_ticket(
                     "event": a["metadata"].get("headline", ""),
                     "ticker": a["metadata"].get("ticker", ""),
                     "date": a["metadata"].get("event_date", ""),
-                    "5d_return": f"{a['metadata'].get('price_reaction_5d', 0):.1%}",
+                    "similarity": a.get("similarity", 0),
+                    "1d_return": f"{float(a['metadata'].get('price_reaction_1d', 0)):.1%}",
+                    "5d_return": f"{float(a['metadata'].get('price_reaction_5d', 0)):.1%}",
+                    "peer_reaction_1d": _parse_peers(a["metadata"].get("peer_reaction_1d")),
                 }
-                for a in analogues.get("analogues", [])[:3]
+                for a in analogues.get("analogues", [])[:5]
             ],
         },
         "compliance": {

@@ -1,8 +1,48 @@
 """Three structured retrievals: analogues → mandate → freshness."""
 import json
+import re
 import statistics
+
+from openai import OpenAI
+
+from .config import LLM_BASE_URL, LLM_API_KEY, LLM_MODEL, MANDATE_PATH
+from .edgar import get_recent_filing_text
 from .vector_store import query_analogues
-from .config import MANDATE_PATH
+
+_FRESHNESS_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "freshness_check",
+        "description": "Verify each thesis fact against the company's most recent SEC filing",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "enum": ["FRESH", "STALE", "PARTIAL"],
+                    "description": "FRESH if all facts confirmed, STALE if contradicted, PARTIAL if mixed",
+                },
+                "checks": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "fact": {"type": "string"},
+                            "confirmed": {"type": "boolean"},
+                            "evidence": {"type": "string"},
+                        },
+                        "required": ["fact", "confirmed", "evidence"],
+                    },
+                },
+                "staleness_reason": {
+                    "type": "string",
+                    "description": "Explain why thesis is stale (empty if FRESH)",
+                },
+            },
+            "required": ["status", "checks"],
+        },
+    },
+}
 
 
 def retrieval_1_analogues(event_type: str, ticker: str, headline: str, sector: str) -> dict:
@@ -59,48 +99,9 @@ def retrieval_2_mandate(ticker: str, sector: str) -> dict:
 
 def retrieval_3_freshness(ticker: str, cik: str, key_facts: list[str]) -> dict:
     """Retrieval 3: most recent 10-Q/10-K to verify thesis facts aren't stale."""
-    from .edgar import get_recent_filing_text
-    from openai import OpenAI
-    from .config import LLM_BASE_URL, LLM_API_KEY, LLM_MODEL
-
     filing_text = get_recent_filing_text(cik, form_types=["10-Q", "10-K"])
     if not filing_text:
         return {"status": "UNKNOWN", "checks": [], "staleness_reason": "Could not retrieve recent filing"}
-
-    tool = {
-        "type": "function",
-        "function": {
-            "name": "freshness_check",
-            "description": "Verify each thesis fact against the company's most recent SEC filing",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "status": {
-                        "type": "string",
-                        "enum": ["FRESH", "STALE", "PARTIAL"],
-                        "description": "FRESH if all facts confirmed, STALE if contradicted, PARTIAL if mixed",
-                    },
-                    "checks": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "fact": {"type": "string"},
-                                "confirmed": {"type": "boolean"},
-                                "evidence": {"type": "string"},
-                            },
-                            "required": ["fact", "confirmed", "evidence"],
-                        },
-                    },
-                    "staleness_reason": {
-                        "type": "string",
-                        "description": "Explain why thesis is stale (empty if FRESH)",
-                    },
-                },
-                "required": ["status", "checks"],
-            },
-        },
-    }
 
     client = OpenAI(base_url=LLM_BASE_URL, api_key=LLM_API_KEY)
     prompt = (
@@ -115,7 +116,7 @@ def retrieval_3_freshness(ticker: str, cik: str, key_facts: list[str]) -> dict:
     response = client.chat.completions.create(
         model=LLM_MODEL,
         messages=[{"role": "user", "content": prompt}],
-        tools=[tool],
+        tools=[_FRESHNESS_TOOL],
         tool_choice="required",
         temperature=0.0,
         max_tokens=1024,
@@ -125,8 +126,7 @@ def retrieval_3_freshness(ticker: str, cik: str, key_facts: list[str]) -> dict:
     if tc:
         return json.loads(tc[0].function.arguments)
 
-    # vLLM returned content — try to parse JSON from it
-    import re
+    # Fallback for vLLM deployments that return arguments as plain content.
     content = response.choices[0].message.content or ""
     match = re.search(r'\{[\s\S]*\}', content)
     if match:
