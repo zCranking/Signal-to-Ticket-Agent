@@ -40,5 +40,33 @@
     "description": "Amazon reported Q2 2024 revenue of $148.0B vs $148.6B consensus (slight miss) but operating income of $14.7B crushed the $13.0B consensus. AWS grew 19% YoY to $26.3B. Guided Q3 operating income to $11.5B-$15.0B above the $13.3B consensus.",
     "use_pre_loaded_text": true,
     "pre_loaded_text": "AMAZON.COM ANNOUNCES SECOND QUARTER RESULTS. SEATTLE - August 1, 2024 - Amazon.com, Inc. (NASDAQ: AMZN) today announced financial results for its second quarter ended June 30, 2024. Net sales increased 10% to $148.0 billion in the second quarter, compared with $134.4 billion in second quarter 2023. Operating income increased to $14.7 billion in the second quarter, compared with $7.7 billion in second quarter 2023. Net income increased to $13.5 billion in the second quarter, or $1.26 per diluted share, compared with $6.7 billion, or $0.65 per diluted share, in second quarter 2023. AWS net sales were $26.3 billion in Q2 2024, up 19% year over year, driven by customer demand for cloud computing and generative AI services. North America segment operating income was $5.1 billion for Q2 2024, an 8.1% operating margin versus 3.9% in the prior year period. Andy Jassy, Amazon's President and CEO, said: 'Q2 was a strong quarter across the board. AWS continues to reaccelerate, driven by companies both optimizing their existing workloads and committing to new long-term deals.' Q3 2024 Guidance: Net sales between $154.0 billion and $158.5 billion, representing growth of 8% to 11% year over year. Operating income between $11.5 billion and $15.0 billion."
+  },
+  {
+    "id": "demo_meta_q3fy24_restricted",
+    "label": "META — Q3 2024 Earnings Beat (RESTRICTED TICKER — mandate kill)",
+    "ticker": "META",
+    "cik": "0001326801",
+    "filing_date": "2024-10-30",
+    "accession": "0001326801-24-000123",
+    "primary_document": "meta-20240930.htm",
+    "items": "2.02,9.01",
+    "event_type": "earnings_beat",
+    "description": "Meta beat on revenue ($40.6B vs $40.3B est) and EPS ($6.03 vs $5.25 est) — but META sits on the fund's restricted ticker list, so the agent must kill the trade regardless of how bullish the signal is. Demonstrates the mandate gate.",
+    "use_pre_loaded_text": true,
+    "pre_loaded_text": "META REPORTS THIRD QUARTER 2024 RESULTS. MENLO PARK, Calif. - October 30, 2024 - Meta Platforms, Inc. (NASDAQ: META) today reported financial results for the quarter ended September 30, 2024. Revenue was $40.59 billion, an increase of 19% year-over-year. Net income was $15.69 billion, an increase of 35% year-over-year. Diluted earnings per share was $6.03, compared to analyst consensus of $5.25. Family daily active people (DAP) was 3.29 billion on average for September 2024, an increase of 5% year-over-year. Ad impressions delivered across our Family of Apps increased 7% year-over-year and the average price per ad increased 11% year-over-year. Reality Labs operating loss was $4.43 billion. CEO Mark Zuckerberg said: 'We had a good quarter driven by AI progress across our apps and business. We also have strong momentum with Meta AI, Llama adoption, and AI-powered glasses.' CFO Outlook: We expect fourth quarter 2024 total revenue to be in the range of $45-48 billion. We anticipate our full-year 2024 total expenses to be in the range of $96-98 billion. We continue to expect significant capital expenditures growth in 2025 as we invest in AI infrastructure, with capital expenditures in the range of $38-40 billion for full-year 2024."
+  },
+  {
+    "id": "demo_intc_guidance_cut",
+    "label": "INTC — Q2 2024 Guidance Cut + Dividend Suspension",
+    "ticker": "INTC",
+    "cik": "0000050863",
+    "filing_date": "2024-08-01",
+    "accession": "0000050863-24-000123",
+    "primary_document": "intc-20240629.htm",
+    "items": "2.02,2.05,9.01",
+    "event_type": "guidance_cut",
+    "description": "Intel guided Q3 revenue to $12.5-$13.5B vs $14.3B consensus, announced a $10B cost reduction plan with 15%+ headcount cuts, and suspended its dividend. Stock fell 26% the next day. Tests the agent's bearish-event handling against a long-only mandate.",
+    "use_pre_loaded_text": true,
+    "pre_loaded_text": "INTEL REPORTS SECOND QUARTER 2024 FINANCIAL RESULTS; ANNOUNCES $10 BILLION COST REDUCTION PLAN. SANTA CLARA, Calif. - August 1, 2024 - Intel Corporation (NASDAQ: INTC) today reported second quarter 2024 financial results. Second quarter revenue was $12.8 billion, down 1% year-over-year. GAAP loss per share was $(0.38); non-GAAP EPS was $0.02, below guidance. Gross margin of 35.4% declined 3.1 percentage points year-over-year, driven by the accelerated ramp of AI PC products and higher charges related to non-core businesses. Q3 2024 Business Outlook: Intel expects revenue of $12.5 billion to $13.5 billion, below analyst consensus of $14.3 billion, and non-GAAP EPS of $(0.03). Cost Reduction Plan: Intel announced a comprehensive reduction in spending, including a greater than 15% reduction in headcount, targeting $10 billion in cost savings for 2025. The company expects to complete the majority of headcount actions by the end of 2024. Dividend Suspension: Intel announced it will suspend its dividend starting in the fourth quarter of 2024, prioritizing liquidity to support investments needed to execute its strategy. CEO Pat Gelsinger said: 'Our Q2 financial performance was disappointing, even as we hit key product and process technology milestones. Second-half trends are more challenging than we previously expected.'"
   }
 ]

@@ -1,7 +1,7 @@
 {
   "fund_name": "Signal Capital Partners — Domestic Equity Fund",
-  "version": "2026-Q1",
-  "effective_date": "2026-01-01",
+  "version": "2025-Q3",
+  "effective_date": "2025-07-01",
 
   "hard_rules": {
     "description": "Any violation results in an automatic KILL. No exceptions.",
