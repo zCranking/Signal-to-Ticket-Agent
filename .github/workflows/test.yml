@@ -1,0 +1,26 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      # Tests stub out embeddings and LLM calls, so the heavy model
+      # dependencies (torch via sentence-transformers) are not installed here.
+      - name: Install test dependencies
+        run: |
+          pip install pytest chromadb openai python-dotenv requests pandas yfinance
+
+      - name: Run tests
+        run: python -m pytest tests/ -v
